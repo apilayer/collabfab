@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CollabFab
 
-## Getting Started
+A live 3-D globe of everyone who currently has the page open. Open it and you
+appear on the globe, geolocated in real time by the
+[ipstack](https://ipstack.com) API; so does everyone else. Click a pin to read
+their profile, their full IP intel, and an explainable score for whether the two
+of you are actually worth introducing.
 
-First, run the development server:
+Built with **ipstack**, an [APILayer](https://apilayer.com/) product.
+
+## What's in it
+
+- **Cartoon vector globe** that swaps to real raster map tiles as you zoom, all
+  the way down to street level, then hands back to vectors on the way out.
+- **Live presence** — a session heartbeat puts you on everyone's globe within a
+  few seconds, with a shared activity feed.
+- **Session-scoped profiles** — name, bio, contact details and why someone
+  should reach out. Stored against a *session* cookie, so closing the browser or
+  clearing cookies wipes your identity for good.
+- **Full ipstack intel** per visitor: coordinates, city, region, country,
+  languages, currency, timezone, ASN, ISP, connection type and security flags.
+- **Handshake Score** — see below.
+
+## The Handshake Score
+
+Everyone else on the globe is ranked by how worthwhile it would be to actually
+talk to them, scored out of 100 from live ipstack fields plus whatever the two
+of you chose to share:
+
+| Signal | Max | Source |
+| --- | --- | --- |
+| Working-hour overlap | 35 | `time_zone.gmt_offset` |
+| Common language | 20 | `location.languages` |
+| Shared interests | 20 | profile tags |
+| Proximity | 15 | `latitude` / `longitude` |
+| Network kinship | 10 | `connection.asn`, `connection_type` |
+
+Unlike the usual black-box "likelihood" number, every point is attributed to a
+named line with the evidence behind it — open anyone's card to see the full
+breakdown.
+
+## Running it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` (see `.env.example`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+IPSTACK_ACCESS_KEY=your_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Get a free key at [ipstack.com](https://ipstack.com). Presence is stored in a
+local SQLite file (`./collabfab.db`) by default; set `TURSO_DATABASE_URL` and
+`TURSO_AUTH_TOKEN` to use Turso in production. The schema is created on first
+request — there is no migration step.
 
-## Learn More
+### Plan differences
 
-To learn more about Next.js, take a look at the following resources:
+The `security`, `time_zone`, `currency` and `connection` modules aren't on every
+ipstack plan. CollabFab detects a restricted plan once, downgrades its requests,
+and falls back to estimating the UTC offset from longitude and the ISP from
+reverse DNS — every surface labels those values as estimated rather than
+presenting them as ipstack data.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Map tiles
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Raster tiles come from OpenStreetMap, which is free to use with attribution.
+OSM asks heavy consumers to move to their own provider — point
+`NEXT_PUBLIC_TILE_URL` at any `{z}/{x}/{y}` endpoint to do that. Tiles are cached
+in the browser's Cache Storage, so a route you've already flown costs no network.
 
-## Deploy on Vercel
+## Simulated crowd
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The people icon in the toolbar adds a clearly-labelled simulated crowd so the
+globe can be evaluated solo. Those visitors carry a dashed ring and a `SIMULATED`
+badge and can't be waved at — they are never mixed in with real people.
