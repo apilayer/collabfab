@@ -198,7 +198,7 @@ export function VisitorCard({
             {visitor.lookingFor && (
               <div className="mt-2.5 rounded-lg border border-border bg-panel-2 p-2.5">
                 <p className="mono mb-1 text-[10px] tracking-wider text-fg-dim uppercase">
-                  Why reach out
+                  Looking to build
                 </p>
                 <p className="text-[12px] leading-relaxed whitespace-pre-line text-fg">
                   {visitor.lookingFor}

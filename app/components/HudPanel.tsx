@@ -201,7 +201,7 @@ export function HudPanel(props: Props) {
         <span className="pulse-dot h-2 w-2 rounded-full" style={{ background: "var(--live)" }} />
         <span className="font-semibold">{visitors.length}</span>
         <span className="text-fg-muted">
-          {visitors.length === 1 ? "explorer" : "explorers"} on
+          {visitors.length === 1 ? "person" : "people"} here on
         </span>
         <span className="mono rounded-md border border-border bg-panel-2 px-1.5 py-0.5 text-[12px]">
           collabfab
@@ -247,7 +247,7 @@ export function HudPanel(props: Props) {
               onClick={props.onOpenProfile}
               className="mono ml-auto shrink-0 rounded-md border border-accent/50 bg-[var(--accent-soft)] px-2 py-0.5 text-accent transition hover:brightness-110"
             >
-              add your details →
+              say what you&apos;re building →
             </button>
           )}
         </div>

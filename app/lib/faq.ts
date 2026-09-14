@@ -9,7 +9,7 @@ export const FAQ_DATA: IFaqItem[] = [
     id: "faq-1",
     question: "What is CollabFab?",
     answer:
-      "CollabFab is a live 3D globe of everyone who currently has the page open. When you arrive, your approximate location is resolved from your IP address and you appear on the globe as a pin; so does everyone else. Clicking a pin opens that visitor's profile, the full geolocation and network detail behind their IP, and a Handshake Score estimating how worthwhile it would be for the two of you to talk. The globe zooms from planet scale down to street level.",
+      "CollabFab is a place to find people to build with. Everyone who has the page open right now appears on a shared 3D globe, placed by their IP address — no sign-up, no location permission. Say what you are working on and what you want from a collaborator, and CollabFab ranks everyone else by a Handshake Score: how worthwhile it would actually be for the two of you to talk, given your overlapping working hours, shared language, common interests, distance and network. Open anyone's pin to read their profile, see that score broken down line by line, and get in touch.",
   },
   {
     id: "faq-2",
@@ -33,13 +33,13 @@ export const FAQ_DATA: IFaqItem[] = [
     id: "faq-5",
     question: "What is the Handshake Score?",
     answer:
-      "The Handshake Score estimates how worthwhile it would be for you and another visitor to actually talk, scored out of 100. It combines how many working hours your two timezones share, whether you have a language in common, any interest tags you have both entered, how far apart you are, and whether you are on a related network. Every point is attributed to a named line with the evidence behind it, so you can open any visitor's card and see exactly how the number was reached rather than trusting a black box.",
+      "The Handshake Score is how CollabFab decides who to put in front of you. It estimates how worthwhile a conversation between you and another person would be, out of 100, combining how many working hours your two timezones share, whether you have a language in common, any interest or skill tags you have both entered, how far apart you are, and whether you are on a related network. Working-hour overlap carries the most weight, because two people who are never awake at the same time will struggle to build anything together. Every point is attributed to a named line with the evidence behind it, so you can see exactly how the number was reached rather than trusting a black box.",
   },
   {
     id: "faq-6",
     question: "What happens to the profile details I enter?",
     answer:
-      "Your profile is stored against a session cookie and shown to everyone else on the globe. Because the cookie has no expiry, closing your browser or clearing cookies deletes your identity permanently — you return as a brand-new stranger with a new name and avatar, and the old profile is gone. Anything you type, including an email address, is public to other visitors, so only share what you would put on a public profile.",
+      "Your profile — what you are building, what you want from a collaborator, your tags and contact details — is stored against a session cookie and shown to everyone else on the globe. Because the cookie has no expiry, closing your browser or clearing cookies deletes your identity permanently: you return as a brand-new stranger with a new name and avatar, and the old profile is gone. Anything you type, including an email address, is public to other visitors, so only share what you would put on a public profile.",
   },
   {
     id: "faq-7",

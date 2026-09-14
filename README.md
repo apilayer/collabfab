@@ -1,10 +1,10 @@
 # CollabFab
 
-A live 3-D globe of everyone who currently has the page open. Open it and you
-appear on the globe, geolocated in real time by the
-[ipstack](https://ipstack.com) API; so does everyone else. Click a pin to read
-their profile, their full IP intel, and an explainable score for whether the two
-of you are actually worth introducing.
+Find people to build with. Everyone who has the page open right now appears on a
+shared 3-D globe, placed by their IP address via the
+[ipstack](https://ipstack.com) API — no sign-up, no location permission. Say what
+you're working on, and CollabFab ranks everyone else by how worthwhile a
+conversation between you would actually be.
 
 Built with **ipstack**, an [APILayer](https://apilayer.com/) product.
 
@@ -13,9 +13,9 @@ Built with **ipstack**, an [APILayer](https://apilayer.com/) product.
 - **Cartoon vector globe** that swaps to real raster map tiles as you zoom, all
   the way down to street level, then hands back to vectors on the way out.
 - **Live presence** — a session heartbeat puts you on everyone's globe within a
-  few seconds, with a shared activity feed.
-- **Session-scoped profiles** — name, bio, contact details and why someone
-  should reach out. Stored against a *session* cookie, so closing the browser or
+  few seconds, with a shared activity feed so you can see who just arrived.
+- **Session-scoped profiles** — name, bio, what you're looking to build, and how
+  to reach you. Stored against a *session* cookie, so closing the browser or
   clearing cookies wipes your identity for good.
 - **Full ipstack intel** per visitor: coordinates, city, region, country,
   languages, currency, timezone, ASN, ISP, connection type and security flags.
@@ -23,9 +23,9 @@ Built with **ipstack**, an [APILayer](https://apilayer.com/) product.
 
 ## The Handshake Score
 
-Everyone else on the globe is ranked by how worthwhile it would be to actually
-talk to them, scored out of 100 from live ipstack fields plus whatever the two
-of you chose to share:
+This is the part that makes CollabFab more than a map. Everyone else on the
+globe is ranked by how worthwhile it would be to actually talk to them, scored
+out of 100 from live ipstack fields plus whatever the two of you chose to share:
 
 | Signal | Max | Source |
 | --- | --- | --- |
@@ -35,9 +35,10 @@ of you chose to share:
 | Proximity | 15 | `latitude` / `longitude` |
 | Network kinship | 10 | `connection.asn`, `connection_type` |
 
-Unlike the usual black-box "likelihood" number, every point is attributed to a
-named line with the evidence behind it — open anyone's card to see the full
-breakdown.
+Working-hour overlap carries the most weight: two people who are never awake at
+the same time will struggle to build anything together. Unlike the usual
+black-box "likelihood" number, every point is attributed to a named line with the
+evidence behind it — open anyone's card to see the full breakdown.
 
 ## Running it
 

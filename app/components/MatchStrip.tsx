@@ -95,8 +95,8 @@ export function MatchStrip({
             ))}
           </ul>
           <p className="mt-2 border-t border-border pt-2 text-[10px] leading-snug text-fg-dim">
-            Scored on shared working hours, language, interests, distance and network — open
-            anyone to see the full breakdown.
+            Who&apos;s worth reaching out to, scored on shared working hours, language,
+            interests, distance and network — open anyone for the full breakdown.
           </p>
         </>
       )}

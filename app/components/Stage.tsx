@@ -259,10 +259,11 @@ export function Stage() {
         )}
         {alone && !error && (
           <div className="panel mt-3 w-[min(92vw,470px)] p-3.5">
-            <p className="text-[13px] text-fg">You&apos;re the only one here right now.</p>
+            <p className="text-[13px] text-fg">No one else is here yet.</p>
             <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">
-              Send someone the link and they&apos;ll appear on the globe within a few seconds —
-              or switch on the simulated crowd to see how a busy room behaves.
+              CollabFab works when there are people in it. Send the link to someone
+              you&apos;d want to build with and they&apos;ll appear within seconds — or switch
+              on the simulated crowd to see how a busy room behaves.
             </p>
             <div className="mt-2.5 flex gap-2">
               <button

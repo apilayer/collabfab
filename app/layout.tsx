@@ -6,9 +6,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CollabFab — a live 3D globe of everyone who's here",
+  title: "CollabFab — find people to build with, on a live 3D globe",
   description:
-    "Open CollabFab and you appear on a cartoon 3D globe, geolocated in real time by ipstack. See who else is online, read their full IP intel, and get an explainable Handshake Score for who's actually worth talking to.",
+    "CollabFab puts everyone who is online right now on a 3D globe, geolocated in real time by ipstack. Say what you are building, and an explainable Handshake Score ranks who is actually worth reaching out to — by shared working hours, language, interests, distance and network.",
 };
 
 export default function RootLayout({

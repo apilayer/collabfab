@@ -16,16 +16,16 @@ type Field = {
 
 const FIELDS: Field[] = [
   { key: "displayName", label: "Name", hint: "Shown instead of your animal alias.", max: 40 },
-  { key: "headline", label: "Headline", hint: "One line — what you do.", max: 80 },
+  { key: "headline", label: "Headline", hint: "One line — what you do, or what you are building.", max: 80 },
   { key: "bio", label: "Bio", hint: "A short paragraph about you.", max: 600, area: true },
   {
     key: "lookingFor",
-    label: "Why should someone contact you?",
-    hint: "The thing you actually want from a stranger on this globe.",
+    label: "What are you looking to build or collaborate on?",
+    hint: "The reason a stranger on this globe should message you.",
     max: 300,
     area: true,
   },
-  { key: "tags", label: "Tags", hint: "Comma separated. These drive your Handshake score.", max: 160 },
+  { key: "tags", label: "Tags", hint: "Comma separated — skills or interests. These drive your Handshake score.", max: 160 },
   { key: "email", label: "Email", hint: "Optional. Public to everyone on the globe.", max: 120, type: "email" },
   { key: "website", label: "Website", hint: "Optional.", max: 160 },
   { key: "social", label: "Social handle", hint: "Optional, e.g. @you.", max: 120 },
