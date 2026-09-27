@@ -46,7 +46,7 @@ export function Stage() {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch(`/api/presence${refresh ? "?refresh=1" : ""}`, {
+      const res = await fetch(`/devtools/real-time-tracker/api/presence${refresh ? "?refresh=1" : ""}`, {
         cache: "no-store",
       });
       const json = await res.json();
@@ -178,7 +178,7 @@ export function Stage() {
   async function wave(id: string) {
     setWaved((s) => new Set(s).add(id));
     try {
-      await fetch("/api/wave", {
+      await fetch("/devtools/real-time-tracker/api/wave", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ targetId: id }),

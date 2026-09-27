@@ -62,7 +62,7 @@ export function ProfileSheet({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/profile", {
+      const res = await fetch("/devtools/real-time-tracker/api/profile", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
