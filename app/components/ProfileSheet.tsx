@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ProfileInput, PublicVisitor } from "@/interfaces/visitor.interface";
 import { Avatar } from "./Avatar";
 import { CloseIcon } from "./Icons";
+import { BASE_PATH } from "@/app/lib/basePath";
 
 type Field = {
   key: keyof ProfileInput;
@@ -62,7 +63,7 @@ export function ProfileSheet({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/profile", {
+      const res = await fetch(`${BASE_PATH}/api/profile`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),

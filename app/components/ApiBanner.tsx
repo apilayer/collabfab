@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ApiLayerLogo } from "./ApiLayerLogo";
+import { assetPath } from "@/app/lib/assets";
 
 /**
  * APILayer signup link, UTM-tagged the same way the other devtools tag theirs
@@ -32,7 +33,7 @@ export function ApiBanner() {
       <div className="relative z-10 flex flex-col gap-3 p-4">
         <span className="flex items-center gap-2">
           <Image
-            src="/brand/ipstack-white.png"
+            src={assetPath("/brand/ipstack-white.png")}
             alt="ipstack"
             width={68}
             height={18}
@@ -96,7 +97,7 @@ export function AttributionBanner() {
       <div className="relative z-10 flex h-full items-center justify-between gap-2 px-3">
         <span className="flex shrink-0 items-center gap-2">
           <Image
-            src="/brand/ipstack-white.png"
+            src={assetPath("/brand/ipstack-white.png")}
             alt="ipstack"
             width={53}
             height={14}
