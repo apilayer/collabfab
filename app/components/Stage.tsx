@@ -13,7 +13,6 @@ import { ProfileSheet } from "./ProfileSheet";
 import { MatchStrip } from "./MatchStrip";
 import { AttributionBanner } from "./ApiBanner";
 import { FaqModal } from "./FaqModal";
-import { BASE_PATH } from "@/app/lib/basePath";
 
 const POLL_MS = 4000;
 
@@ -47,7 +46,7 @@ export function Stage() {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch(`${BASE_PATH}/api/presence${refresh ? "?refresh=1" : ""}`, {
+      const res = await fetch(`/api/presence${refresh ? "?refresh=1" : ""}`, {
         cache: "no-store",
       });
       const json = await res.json();
@@ -179,7 +178,7 @@ export function Stage() {
   async function wave(id: string) {
     setWaved((s) => new Set(s).add(id));
     try {
-      await fetch(`${BASE_PATH}/api/wave`, {
+      await fetch("/api/wave", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ targetId: id }),

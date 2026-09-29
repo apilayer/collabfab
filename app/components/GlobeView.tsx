@@ -15,7 +15,6 @@ import {
 import { loadTileBitmap } from "@/app/lib/tileCache";
 import type { PublicVisitor } from "@/interfaces/visitor.interface";
 import { accentFor, avatarSvg } from "@/app/lib/avatar";
-import { assetPath } from "@/app/lib/assets";
 
 type Props = {
   visitors: PublicVisitor[];
@@ -204,13 +203,13 @@ export function GlobeView({
 
       const [{ default: Globe }, countries, states, labels] = await Promise.all([
         import("globe.gl"),
-        fetch(assetPath("/countries.geojson")).then(
+        fetch("/countries.geojson").then(
           (r) => r.json() as Promise<{ features: object[] }>
         ),
-        fetch(assetPath("/states.geojson")).then(
+        fetch("/states.geojson").then(
           (r) => r.json() as Promise<{ features: StateFeature[] }>
         ),
-        fetch(assetPath("/labels.json")).then((r) => r.json() as Promise<PlaceLabel[]>),
+        fetch("/labels.json").then((r) => r.json() as Promise<PlaceLabel[]>),
       ]);
       if (cancelled || !hostRef.current) return;
 

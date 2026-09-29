@@ -230,7 +230,6 @@ jobs:
 
     env:
       APP_ROOT: ${{ vars.APP_ROOT }}
-      APP_BASE_PATH: ${{ vars.APP_BASE_PATH }}
 
     steps:
       - name: Checkout repository
@@ -250,14 +249,7 @@ jobs:
           timeout: 1200
           script: |
             cd "${APP_ROOT}"
-            case "${APP_BASE_PATH:-}" in
-              /?*) ;;
-              *)
-                echo "ERROR: APP_BASE_PATH must be a sub-path like /my-app (got: '${APP_BASE_PATH:-}')."
-                exit 1
-                ;;
-            esac
-            NEXT_PUBLIC_BASE_PATH="${APP_BASE_PATH}" npm run build
+            npm run build
 
   # JOB 5: RESTART
   restart:
@@ -270,7 +262,6 @@ jobs:
       APP_ROOT: ${{ vars.APP_ROOT }}
       APP_PORT: ${{ vars.APP_PORT }}
       PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
-      APP_BASE_PATH: ${{ vars.APP_BASE_PATH }}
 
     steps:
       - name: Checkout repository
@@ -289,7 +280,6 @@ jobs:
           instance-ids: ${{ needs.prepare.outputs.instance_ids }}
           script: |
             cd "${APP_ROOT}"
-            export NEXT_PUBLIC_BASE_PATH="${APP_BASE_PATH}"
 
             if pm2 describe "${PM2_APP_NAME}" >/dev/null 2>&1; then
               echo "Reloading ${PM2_APP_NAME}..."
@@ -413,7 +403,6 @@ jobs:
               mv "${BUILD_BACKUP}" .next
             fi
 
-            export NEXT_PUBLIC_BASE_PATH="${APP_BASE_PATH}"
             echo "Reloading previous version..."
             if pm2 describe "${PM2_APP_NAME}" >/dev/null 2>&1; then
               pm2 reload "${PM2_APP_NAME}" --update-env
