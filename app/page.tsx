@@ -1,28 +1,17 @@
 import { Stage } from "./components/Stage";
-import { FAQ_DATA } from "./lib/faq";
-
-/**
- * Rendered server-side and always present in the HTML — search engines index
- * the FAQ regardless of whether a visitor ever opens the modal.
- */
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQ_DATA.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: { "@type": "Answer", text: item.answer },
-  })),
-};
+import { SeoContent } from "./components/SeoContent";
+import { StructuredData } from "./components/StructuredData";
 
 export default function Home() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-      <Stage />
+      <StructuredData />
+      {/* The globe keeps the viewport to itself; the readable content sits
+          below it in normal flow so it is in the HTML and reachable. */}
+      <div className="h-screen w-full">
+        <Stage />
+      </div>
+      <SeoContent />
     </>
   );
 }
