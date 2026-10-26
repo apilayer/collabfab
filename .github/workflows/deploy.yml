@@ -1,0 +1,428 @@
+name: Application CI/CD
+
+on:
+  push:
+    branches:
+      - staging
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # JOB 0: RESOLVE ENVIRONMENT
+  resolve:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set.outputs.environment }}
+    steps:
+      - name: Determine environment from branch
+        id: set
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
+            echo "environment=production" >> "${GITHUB_OUTPUT}"
+          else
+            echo "environment=staging" >> "${GITHUB_OUTPUT}"
+          fi
+
+  # JOB 1: PREPARE
+  prepare:
+    name: Prepare deployment
+    runs-on: ubuntu-latest
+    needs: resolve
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_DISPLAY_NAME: ${{ vars.APP_DISPLAY_NAME }}
+      APP_ROOT: ${{ vars.APP_ROOT }}
+      APP_PORT: ${{ vars.APP_PORT }}
+      APP_BASE_PATH: ${{ vars.APP_BASE_PATH }}
+      ASG_NAME: ${{ vars.ASG_NAME }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      GIT_BRANCH: ${{ vars.GIT_BRANCH }}
+      PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+      REPO_URL: ${{ vars.REPO_URL }}
+
+    outputs:
+      instance_ids: ${{ steps.instances.outputs.instance_ids }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check GitHub context
+        run: |
+          echo "========================================"
+          echo "GitHub Context"
+          echo "========================================"
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Ref: ${GITHUB_REF}"
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Commit: ${GITHUB_SHA}"
+          echo "Resolved environment: ${{ needs.resolve.outputs.environment }}"
+          echo ""
+          echo "========================================"
+          echo "Application Configuration"
+          echo "========================================"
+          echo "Application: ${APP_DISPLAY_NAME}"
+          echo "Application Root: ${APP_ROOT}"
+          echo "PM2 Application: ${PM2_APP_NAME}"
+          echo "Application Port: ${APP_PORT}"
+          echo "Application Base Path: ${APP_BASE_PATH}"
+          echo "Git Branch: ${GIT_BRANCH}"
+          echo "Repo URL: ${REPO_URL}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Find running EC2 instances
+        id: instances
+        run: |
+          echo "========================================"
+          echo "Finding running EC2 instances"
+          echo "========================================"
+          echo "ASG: ${ASG_NAME}"
+
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:aws:autoscaling:groupName,Values=${ASG_NAME}" \
+              "Name=instance-state-name,Values=running" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text)
+
+          if [[ -z "${INSTANCE_IDS}" || "${INSTANCE_IDS}" == "None" ]]; then
+            echo "ERROR: No running EC2 instances found for ASG."
+            exit 1
+          fi
+
+          echo ""
+          echo "Target EC2 instances:"
+          echo "${INSTANCE_IDS}"
+
+          echo "instance_ids=${INSTANCE_IDS}" >> "${GITHUB_OUTPUT}"
+
+  # JOB 2: PULL CODE
+  pull:
+    name: Pull code
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare]
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_ROOT: ${{ vars.APP_ROOT }}
+      GIT_BRANCH: ${{ vars.GIT_BRANCH }}
+      REPO_URL: ${{ vars.REPO_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Pull latest code
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Pull latest code
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          script: |
+            FIRST_DEPLOY=false
+
+            if [[ ! -d "${APP_ROOT}/.git" ]]; then
+              echo "Application directory not found or not a git repo at ${APP_ROOT}."
+              echo "Cloning ${GIT_BRANCH} from ${REPO_URL}..."
+
+              mkdir -p "$(dirname "${APP_ROOT}")"
+              rm -rf "${APP_ROOT}"
+              git clone --branch "${GIT_BRANCH}" --single-branch "${REPO_URL}" "${APP_ROOT}"
+
+              FIRST_DEPLOY=true
+            fi
+
+            cd "${APP_ROOT}"
+
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            echo "Previous commit: ${PREVIOUS_COMMIT}"
+
+            NODE_MODULES_BACKUP_CREATED=false
+            BUILD_BACKUP_CREATED=false
+
+            if [[ -d node_modules ]]; then
+              rm -rf "${NODE_MODULES_BACKUP}"
+              mv node_modules "${NODE_MODULES_BACKUP}"
+              NODE_MODULES_BACKUP_CREATED=true
+              echo "node_modules backup created."
+            fi
+
+            if [[ -d .next ]]; then
+              rm -rf "${BUILD_BACKUP}"
+              mv .next "${BUILD_BACKUP}"
+              BUILD_BACKUP_CREATED=true
+              echo ".next backup created."
+            fi
+
+            if ! git pull --ff-only origin "${GIT_BRANCH}"; then
+              echo "ERROR: git pull failed. Restoring backups..."
+              if [[ "${NODE_MODULES_BACKUP_CREATED}" == "true" ]]; then
+                mv "${NODE_MODULES_BACKUP}" node_modules
+              fi
+              if [[ "${BUILD_BACKUP_CREATED}" == "true" ]]; then
+                mv "${BUILD_BACKUP}" .next
+              fi
+              exit 1
+            fi
+
+            echo "Current commit: $(git rev-parse HEAD)"
+
+            cat > "${STATE_FILE}" <<STATE
+            FIRST_DEPLOY=${FIRST_DEPLOY}
+            PREVIOUS_COMMIT=${PREVIOUS_COMMIT}
+            NODE_MODULES_BACKUP_CREATED=${NODE_MODULES_BACKUP_CREATED}
+            BUILD_BACKUP_CREATED=${BUILD_BACKUP_CREATED}
+            STATE
+
+  # JOB 3: INSTALL DEPENDENCIES
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare, pull]
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_ROOT: ${{ vars.APP_ROOT }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Run npm ci
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Install dependencies
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          timeout: 900
+          script: |
+            cd "${APP_ROOT}"
+            npm ci
+
+  # JOB 4: BUILD
+  build:
+    name: Build application
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare, install]
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_ROOT: ${{ vars.APP_ROOT }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Run npm run build
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Build application
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          timeout: 1200
+          script: |
+            cd "${APP_ROOT}"
+            npm run build
+
+  # JOB 5: RESTART
+  restart:
+    name: Restart application
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare, build]
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_ROOT: ${{ vars.APP_ROOT }}
+      APP_PORT: ${{ vars.APP_PORT }}
+      PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Start or reload PM2
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Restart application
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          script: |
+            cd "${APP_ROOT}"
+
+            if pm2 describe "${PM2_APP_NAME}" >/dev/null 2>&1; then
+              echo "Reloading ${PM2_APP_NAME}..."
+              pm2 reload "${PM2_APP_NAME}" --update-env
+            else
+              echo "Starting ${PM2_APP_NAME}..."
+              pm2 start npm \
+                --name "${PM2_APP_NAME}" \
+                --cwd "${APP_ROOT}" \
+                -- start -- -p "${APP_PORT}"
+            fi
+
+            pm2 save
+
+  # JOB 6: HEALTH CHECK
+  health:
+    name: Health check
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare, restart]
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_DISPLAY_NAME: ${{ vars.APP_DISPLAY_NAME }}
+      APP_ROOT: ${{ vars.APP_ROOT }}
+      APP_PORT: ${{ vars.APP_PORT }}
+      APP_BASE_PATH: ${{ vars.APP_BASE_PATH }}
+      GIT_BRANCH: ${{ vars.GIT_BRANCH }}
+      PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Check application health
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Health check
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          script: |
+            for attempt in {1..30}; do
+              if curl --fail --silent --show-error "http://127.0.0.1:${APP_PORT}${APP_BASE_PATH}" > /dev/null; then
+                echo "Health check passed."
+                exit 0
+              fi
+              echo "Health check attempt ${attempt}/30 failed."
+              sleep 2
+            done
+
+            echo "ERROR: Health check failed."
+            pm2 logs "${PM2_APP_NAME}" --lines 50 --nostream || true
+            exit 1
+
+      - name: Deployment summary
+        run: |
+          echo "========================================"
+          echo "DEPLOYMENT SUCCESSFUL ON ALL INSTANCES"
+          echo "========================================"
+          echo "Application: ${APP_DISPLAY_NAME}"
+          echo "Branch: ${GIT_BRANCH}"
+
+  # JOB 7: ROLLBACK
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    needs: [resolve, prepare, pull, install, build, restart, health]
+    if: ${{ failure() && needs.pull.result == 'success' }}
+    environment: ${{ needs.resolve.outputs.environment }}
+
+    env:
+      APP_ROOT: ${{ vars.APP_ROOT }}
+      APP_PORT: ${{ vars.APP_PORT }}
+      APP_BASE_PATH: ${{ vars.APP_BASE_PATH }}
+      PM2_APP_NAME: ${{ vars.PM2_APP_NAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Roll back to previous version
+        uses: ./.github/actions/ssm-run
+        with:
+          phase: Rollback
+          instance-ids: ${{ needs.prepare.outputs.instance_ids }}
+          script: |
+            if [[ "${FIRST_DEPLOY}" == "true" ]]; then
+              echo "First-time deploy on this instance (fresh clone)."
+              echo "There is no previous working version to roll back to."
+              exit 1
+            fi
+
+            if [[ "${NODE_MODULES_BACKUP_CREATED}" != "true" ]]; then
+              echo "ERROR: No previous node_modules backup exists."
+              exit 1
+            fi
+
+            cd "${APP_ROOT}"
+
+            echo "Stopping application..."
+            pm2 stop "${PM2_APP_NAME}" || true
+
+            echo "Restoring commit ${PREVIOUS_COMMIT}..."
+            git reset --hard "${PREVIOUS_COMMIT}"
+
+            echo "Restoring node_modules and build output..."
+            rm -rf node_modules .next
+            mv "${NODE_MODULES_BACKUP}" node_modules
+
+            if [[ "${BUILD_BACKUP_CREATED}" == "true" ]]; then
+              mv "${BUILD_BACKUP}" .next
+            fi
+
+            echo "Reloading previous version..."
+            if pm2 describe "${PM2_APP_NAME}" >/dev/null 2>&1; then
+              pm2 reload "${PM2_APP_NAME}" --update-env
+            else
+              pm2 start npm \
+                --name "${PM2_APP_NAME}" \
+                --cwd "${APP_ROOT}" \
+                -- start -- -p "${APP_PORT}"
+            fi
+
+            pm2 save
+
+            for attempt in {1..30}; do
+              if curl --fail --silent --show-error "http://127.0.0.1:${APP_PORT}${APP_BASE_PATH}" > /dev/null; then
+                echo "ROLLBACK SUCCESSFUL. Application restored to ${PREVIOUS_COMMIT}."
+                exit 0
+              fi
+              echo "Rollback health check attempt ${attempt}/30 failed."
+              sleep 2
+            done
+
+            echo "ROLLBACK FAILED"
+            exit 1
